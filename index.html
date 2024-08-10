@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Bargni tahlil qilish</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            margin-top: 50px;
+        }
+
+        .image-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .label-container {
+            margin-top: 20px;
+        }
+
+        .label-item {
+            margin-bottom: 15px;
+        }
+
+        .progress {
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="text-center">
+            <h1 class="mb-4">Barg kasalligni aniqlash</h1>
+            <p class="lead">Rasm faylini tanlang</p>
+            <input type="file" accept="image/*" id="image-upload" class="form-control" />
+        </div>
+        <div id="webcam-container" class="image-container"></div>
+        <div id="label-container" class="label-container"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script type="text/javascript">
+        const modelURL = "https://teachablemachine.withgoogle.com/models/NARwPuBTk/";
+
+        let model, labelContainer, maxPredictions;
+
+        async function init() {
+            const modelPath = modelURL + "model.json";
+            const metadataPath = modelURL + "metadata.json";
+
+            model = await tmImage.load(modelPath, metadataPath);
+            maxPredictions = model.getTotalClasses();
+
+            labelContainer = document.getElementById("label-container");
+
+            for (let i = 0; i < maxPredictions; i++) {
+                const labelDiv = document.createElement("div");
+                labelDiv.className = "label-item";
+
+                const labelText = document.createElement("span");
+                labelText.className = "label-text";
+
+                const progressDiv = document.createElement("div");
+                progressDiv.className = "progress";
+
+                const progressBar = document.createElement("div");
+                progressBar.className = "progress-bar";
+                progressBar.setAttribute("role", "progressbar");
+                progressBar.style.width = "0%";
+
+                progressDiv.appendChild(progressBar);
+                labelDiv.appendChild(labelText);
+                labelDiv.appendChild(progressDiv);
+
+                labelContainer.appendChild(labelDiv);
+            }
+
+            console.log("Model loaded successfully");
+        }
+
+        async function predict(imageElement) {
+            const prediction = await model.predict(imageElement);
+
+            for (let i = 0; i < maxPredictions; i++) {
+                const labelDiv = labelContainer.childNodes[i];
+                const labelText = labelDiv.querySelector(".label-text");
+                const progressBar = labelDiv.querySelector(".progress-bar");
+
+                labelText.textContent = prediction[i].className;
+                progressBar.style.width = (prediction[i].probability * 100).toFixed(2) + "%";
+                progressBar.textContent = (prediction[i].probability * 100).toFixed(2) + "%";
+                progressBar.setAttribute("aria-valuenow", (prediction[i].probability * 100).toFixed(2));
+                progressBar.setAttribute("aria-valuemin", "0");
+                progressBar.setAttribute("aria-valuemax", "100");
+                progressBar.style.backgroundColor = "#007bff";
+            }
+        }
+
+        document.getElementById("image-upload").addEventListener("change", function (event) {
+            const imageFile = event.target.files[0];
+            const imageElement = document.createElement("img");
+            imageElement.src = window.URL.createObjectURL(imageFile);
+            imageElement.onload = () => predict(imageElement);
+
+            document.getElementById("webcam-container").innerHTML = "";
+            document.getElementById("webcam-container").appendChild(imageElement);
+
+            console.log("Image loaded", imageElement);
+        });
+
+        init();
+    </script>
+</body>
+
+</html>
